@@ -16,10 +16,11 @@ Including another URLconf
 from django.conf.urls import url
 from django.contrib import admin
 
-from main.views import HomePageView, CustomFormView
+from main.views import HomePageView, CustomFormView, FormResponsesListView
 
 urlpatterns = [
     url(r'^$', HomePageView.as_view(), name='home'),
     url(r'^form/(?P<form_pk>\d+)/$', CustomFormView.as_view(), name='custom-form'),
+    url(r'^form/(?P<form_pk>\d+)/responses/$', FormResponsesListView.as_view(), name='form-responses'),
     url(r'^admin/', admin.site.urls),
 ]

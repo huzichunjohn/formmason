@@ -6,6 +6,7 @@ from django.core.urlresolvers import reverse
 from django.http.response import HttpResponseRedirect
 from django.views.generic import FormView
 from django.views.generic import ListView
+from django.views.generic import TemplateView
 
 from main.models import FormSchema, FormResponse
 
@@ -44,3 +45,39 @@ class CustomFormView(FormView):
         form_response.save()
 
         return HttpResponseRedirect(reverse('home'))
+
+class FormResponsesListView(TemplateView):
+    template_name = "form_responses.html"
+
+    def get_context_data(self, **kwargs):
+        ctx = super(FormResponsesListView, self).get_context_data(**kwargs)
+
+        form = self.get_form()
+        schema = form.schema
+        form_fields = schema.keys()
+        ctx["headers"] = form_fields
+        ctx["form"] = form
+
+        responses = self.get_queryset()
+        responses_list = list()
+        for response in responses:
+            response_values = list()
+            response_data = response.response
+
+            for field_name in form_fields:
+                if field_name in response_data:
+                    response_values.append(response_data[field_name])
+                else:
+                    response_values.append('')
+            responses_list.append(response_values)
+
+        ctx["object_list"] = responses_list
+
+        return ctx
+
+    def get_queryset(self):
+        form = self.get_form()
+        return FormResponse.objects.filter(form=form)
+
+    def get_form(self):
+        return FormSchema.objects.get(pk=self.kwargs["form_pk"])
