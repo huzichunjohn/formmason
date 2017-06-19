@@ -2,10 +2,12 @@
 from __future__ import unicode_literals
 
 from django import forms
+from django.core.urlresolvers import reverse
+from django.http.response import HttpResponseRedirect
 from django.views.generic import FormView
 from django.views.generic import ListView
 
-from main.models import FormSchema
+from main.models import FormSchema, FormResponse
 
 class HomePageView(ListView):
     model = FormSchema
@@ -33,3 +35,12 @@ class CustomFormView(FormView):
             return forms.IntegerField
         else:
             return None
+
+    def form_valid(self, form):
+        custom_form = FormSchema.objects.get(pk=self.kwargs["form_pk"])
+        user_response = form.cleaned_data
+
+        form_response = FormResponse(form=custom_form, response=user_response)
+        form_response.save()
+
+        return HttpResponseRedirect(reverse('home'))
