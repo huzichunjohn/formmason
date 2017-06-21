@@ -8,7 +8,9 @@ from django.views.generic import FormView
 from django.views.generic import ListView
 from django.views.generic import TemplateView
 
+import json
 from main.models import FormSchema, FormResponse
+from main.forms import NewDynamicFormForm
 
 class HomePageView(ListView):
     model = FormSchema
@@ -16,6 +18,14 @@ class HomePageView(ListView):
 
 class CustomFormView(FormView):
     template_name = "custom_form.html"
+
+    def get_context_data(self, **kwargs):
+        ctx = super(CustomFormView, self).get_context_data(**kwargs)
+
+        form_schema = FormSchema.objects.get(pk=self.kwargs["form_pk"])
+        ctx["form_schema"] = form_schema
+
+        return ctx
 
     def get_form(self):
         form_structure = FormSchema.objects.get(pk=self.kwargs["form_pk"]).schema
@@ -69,7 +79,8 @@ class FormResponsesListView(TemplateView):
                     response_values.append(response_data[field_name])
                 else:
                     response_values.append('')
-            responses_list.append(response_values)
+            if any(response_values):
+                responses_list.append(response_values)
 
         ctx["object_list"] = responses_list
 
@@ -81,3 +92,41 @@ class FormResponsesListView(TemplateView):
 
     def get_form(self):
         return FormSchema.objects.get(pk=self.kwargs["form_pk"])
+
+class CreateEditFormView(FormView):
+    form_class = NewDynamicFormForm
+    template_name = "create_edit_form.html"
+
+    def get_initial(self):
+        if "form_pk" in self.kwargs:
+            form = FormSchema.objects.get(pk=self.kwargs["form_pk"])
+            initial = {
+                "form_pk": form.pk,
+                "title": form.title,
+                "schema": json.dumps(form.schema)
+            }
+        else:
+            initial = {}
+
+        return initial
+
+    def get_context_data(self, **kwargs):
+        ctx = super(CreateEditFormView, self).get_context_data(**kwargs)
+        if "form_pk" in self.kwargs:
+            ctx["form_pk"] = self.kwargs["form_pk"]
+
+        return ctx
+
+    def form_valid(self, form):
+        cleaned_data = form.cleaned_data
+
+        if cleaned_data.get("form_pk"):
+            old_form = FormSchema.objects.get(pk=cleaned_data["form_pk"])
+            old_form.title = cleaned_data["title"]
+            old_form.schema = cleaned_data["schema"]
+            old_form.save()
+        else:
+            new_form = FormSchema(title=cleaned_data["title"], schema=cleaned_data["schema"])
+            new_form.save()
+
+        return HttpResponseRedirect(reverse("home"))

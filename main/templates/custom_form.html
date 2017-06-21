@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>Custom Form</h1>
+    <h1>{{ form_schema.title }}</h1>
     <form action="" method="post">
         {% csrf_token %}
         {{ form.as_p }}
